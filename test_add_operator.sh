@@ -46,7 +46,7 @@ OUTPUT_DIR="./test_results"
 
 # 需要打包的目录配置
 CONTAINER_ASCEND_DIR="/home/paas/ascend"  # 容器内 ascend 目录
-CONTAINER_MINDSDK_DIR="/home/paas/var/log/mindsdk"  # 容器内 mindsdk 日志目录
+CONTAINER_MINDXSDK_DIR="/home/paas/var/log/mindxsdk"  # 容器内 mindxsdk 日志目录
 PACK_OUTPUT_DIR="./logs_archive"
 
 # 算子名称
@@ -64,7 +64,7 @@ echo "[*] 日志目录: ${OUTPUT_DIR}/"
 if [ -n "$CONTAINER_ID" ]; then
     echo "[*] 容器ID: $CONTAINER_ID"
     echo "[*] 打包目录1: ${CONTAINER_ASCEND_DIR}/ → ${PACK_OUTPUT_DIR}/"
-    echo "[*] 打包目录2: ${CONTAINER_MINDSDK_DIR}/ → ${PACK_OUTPUT_DIR}/"
+    echo "[*] 打包目录2: ${CONTAINER_MINDXSDK_DIR}/ → ${PACK_OUTPUT_DIR}/"
 fi
 echo ""
 
@@ -158,13 +158,13 @@ pack_container_ascend() {
     fi
 }
 
-# 从容器中打包 /home/paas/var/log/mindsdk/ 目录并复制到宿主机
-pack_container_mindsdk() {
+# 从容器中打包 /home/paas/var/log/mindxsdk/ 目录并复制到宿主机
+pack_container_mindxsdk() {
     local operator_name="$1"
     local container="$2"
 
     if [ -z "$container" ]; then
-        echo "[跳过] 未指定容器ID，跳过 mindsdk 打包"
+        echo "[跳过] 未指定容器ID，跳过 mindxsdk 打包"
         return 0
     fi
 
@@ -172,21 +172,21 @@ pack_container_mindsdk() {
     timestamp=$(date '+%Y%m%d_%H%M%S')
     mkdir -p "$PACK_OUTPUT_DIR"
 
-    local pack_name="${operator_name}_mindsdk_${timestamp}.tar.gz"
+    local pack_name="${operator_name}_mindxsdk_${timestamp}.tar.gz"
     local container_tmp="/tmp/${pack_name}"
     local local_pack="${PACK_OUTPUT_DIR}/${pack_name}"
 
-    echo "[*] 打包容器内 ${CONTAINER_MINDSDK_DIR}/ ..."
+    echo "[*] 打包容器内 ${CONTAINER_MINDXSDK_DIR}/ ..."
 
     # 0. 检查目录是否存在
-    if ! docker exec "$container" test -d "$CONTAINER_MINDSDK_DIR" 2>/dev/null; then
-        echo "   [警告] 容器内目录不存在: $CONTAINER_MINDSDK_DIR"
+    if ! docker exec "$container" test -d "$CONTAINER_MINDXSDK_DIR" 2>/dev/null; then
+        echo "   [警告] 容器内目录不存在: $CONTAINER_MINDXSDK_DIR"
         return 0
     fi
 
     # 1. 在容器内打包
     local tar_result
-    tar_result=$(docker exec "$container" tar -czf "$container_tmp" -C "$(dirname "$CONTAINER_MINDSDK_DIR")" "$(basename "$CONTAINER_MINDSDK_DIR")" 2>&1)
+    tar_result=$(docker exec "$container" tar -czf "$container_tmp" -C "$(dirname "$CONTAINER_MINDXSDK_DIR")" "$(basename "$CONTAINER_MINDXSDK_DIR")" 2>&1)
     if [ $? -ne 0 ]; then
         echo "   ✗ 容器内打包失败: $tar_result"
         return 1
@@ -310,7 +310,7 @@ if [ $((current_step % 10)) -ne 0 ] && [ "$current_step" -gt 0 ]; then
     fetch_new_logs "$LOG_FILE" "$last_log_position" "$batch_num" "最终批次, 尺寸: Rows=$ROW_END, Cols=$COL_END" > /dev/null
 fi
 
-# 算子执行完毕，打包容器内 ascend 和 mindsdk 目录
+# 算子执行完毕，打包容器内 ascend 和 mindxsdk 目录
 operator_end_time=$(date +%s)
 operator_duration=$((operator_end_time - start_time))
 operator_minutes=$((operator_duration / 60))
@@ -325,7 +325,7 @@ echo "=================================================="
 echo ""
 pack_container_ascend "$OPERATOR_NAME" "$CONTAINER_ID"
 echo ""
-pack_container_mindsdk "$OPERATOR_NAME" "$CONTAINER_ID"
+pack_container_mindxsdk "$OPERATOR_NAME" "$CONTAINER_ID"
 
 end_time=$(date +%s)
 pack_duration=$((end_time - operator_end_time))
