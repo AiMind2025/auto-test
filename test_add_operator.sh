@@ -26,7 +26,8 @@ LOG_FILE="/opt/container/log/${LOG_ID}/CoreMindCCommonServiceDemo/CDemoLog/CoreM
 OUTPUT_DIR="./test_results"
 
 # 需要打包的目录配置
-CONTAINER_ASCEND_DIR="/home/paas/ascend"  # 容器内目录
+CONTAINER_ASCEND_DIR="/home/paas/ascend"  # 容器内 ascend 目录
+CONTAINER_MINDSDK_DIR="/home/paas/var/log/mindsdk"  # 容器内 mindsdk 日志目录
 PACK_OUTPUT_DIR="./logs_archive"
 
 # 算子名称
@@ -43,7 +44,8 @@ echo "[*] 监控日志: $LOG_FILE"
 echo "[*] 日志目录: ${OUTPUT_DIR}/"
 if [ -n "$CONTAINER_ID" ]; then
     echo "[*] 容器ID: $CONTAINER_ID"
-    echo "[*] 打包目录: ${CONTAINER_ASCEND_DIR}/ → ${PACK_OUTPUT_DIR}/"
+    echo "[*] 打包目录1: ${CONTAINER_ASCEND_DIR}/ → ${PACK_OUTPUT_DIR}/"
+    echo "[*] 打包目录2: ${CONTAINER_MINDSDK_DIR}/ → ${PACK_OUTPUT_DIR}/"
 fi
 echo ""
 
@@ -97,7 +99,7 @@ pack_container_ascend() {
     local container="$2"
 
     if [ -z "$container" ]; then
-        echo "[跳过] 未指定容器ID，跳过容器打包"
+        echo "[跳过] 未指定容器ID，跳过 ascend 打包"
         return 0
     fi
 
@@ -105,7 +107,7 @@ pack_container_ascend() {
     timestamp=$(date '+%Y%m%d_%H%M%S')
     mkdir -p "$PACK_OUTPUT_DIR"
 
-    local pack_name="${operator_name}_${timestamp}.tar.gz"
+    local pack_name="${operator_name}_ascend_${timestamp}.tar.gz"
     local container_tmp="/tmp/${pack_name}"
     local local_pack="${PACK_OUTPUT_DIR}/${pack_name}"
 
@@ -113,6 +115,45 @@ pack_container_ascend() {
 
     # 1. 在容器内打包
     docker exec "$container" tar -czf "$container_tmp" -C "$(dirname "$CONTAINER_ASCEND_DIR")" "$(basename "$CONTAINER_ASCEND_DIR")" 2>/dev/null
+    if [ $? -ne 0 ]; then
+        echo "   ✗ 容器内打包失败"
+        return 1
+    fi
+
+    # 2. 复制到宿主机
+    docker cp "${container}:${container_tmp}" "$local_pack" 2>/dev/null
+    if [ $? -eq 0 ]; then
+        echo "   ✓ 已保存: $local_pack ($(du -h "$local_pack" | cut -f1))"
+        # 清理容器内临时文件
+        docker exec "$container" rm -f "$container_tmp" 2>/dev/null
+    else
+        echo "   ✗ docker cp 失败"
+        return 1
+    fi
+}
+
+# 从容器中打包 /home/paas/var/log/mindsdk/ 目录并复制到宿主机
+pack_container_mindsdk() {
+    local operator_name="$1"
+    local container="$2"
+
+    if [ -z "$container" ]; then
+        echo "[跳过] 未指定容器ID，跳过 mindsdk 打包"
+        return 0
+    fi
+
+    local timestamp
+    timestamp=$(date '+%Y%m%d_%H%M%S')
+    mkdir -p "$PACK_OUTPUT_DIR"
+
+    local pack_name="${operator_name}_mindsdk_${timestamp}.tar.gz"
+    local container_tmp="/tmp/${pack_name}"
+    local local_pack="${PACK_OUTPUT_DIR}/${pack_name}"
+
+    echo "[*] 打包容器内 ${CONTAINER_MINDSDK_DIR}/ ..."
+
+    # 1. 在容器内打包
+    docker exec "$container" tar -czf "$container_tmp" -C "$(dirname "$CONTAINER_MINDSDK_DIR")" "$(basename "$CONTAINER_MINDSDK_DIR")" 2>/dev/null
     if [ $? -ne 0 ]; then
         echo "   ✗ 容器内打包失败"
         return 1
@@ -230,9 +271,11 @@ if [ $((current_step % 10)) -ne 0 ] && [ "$current_step" -gt 0 ]; then
     fetch_new_logs "$LOG_FILE" "$last_log_position" "$batch_num" "最终批次, 尺寸: Rows=$ROW_END, Cols=$COL_END" > /dev/null
 fi
 
-# 算子执行完毕，打包容器内 ascend 目录
+# 算子执行完毕，打包容器内 ascend 和 mindsdk 目录
 echo ""
 pack_container_ascend "$OPERATOR_NAME" "$CONTAINER_ID"
+echo ""
+pack_container_mindsdk "$OPERATOR_NAME" "$CONTAINER_ID"
 
 end_time=$(date +%s)
 duration=$((end_time - start_time))

@@ -12,6 +12,7 @@ LOG_FILE="/d/projects/current/mock_log/CoreMindCCommonServiceDemo/CDemoLog/CoreM
 OUTPUT_DIR="./test_results"
 # 容器打包目录（模拟）
 CONTAINER_ASCEND_DIR="/d/projects/current/mock_ascend"
+CONTAINER_MINDSDK_DIR="/d/projects/current/mock_mindsdk"
 PACK_OUTPUT_DIR="./logs_archive"
 OPERATOR_NAME="TestAddPerformance"
 
@@ -22,17 +23,17 @@ echo "[*] 日志分目录: ${OUTPUT_DIR}/"
 echo "[*] 验证模式: 只跑前 $MAX_STEPS 个组合"
 echo ""
 
-# 从容器中打包（模拟版本用本地目录）
+# 打包 ascend 目录（模拟版本）
 pack_ascend_logs() {
     local operator_name="$1"
     local timestamp
     timestamp=$(date '+%Y%m%d_%H%M%S')
 
     mkdir -p "$PACK_OUTPUT_DIR"
-    local pack_name="${PACK_OUTPUT_DIR}/${operator_name}_${timestamp}.tar.gz"
+    local pack_name="${PACK_OUTPUT_DIR}/${operator_name}_ascend_${timestamp}.tar.gz"
 
     if [ -d "$CONTAINER_ASCEND_DIR" ]; then
-        echo "[*] 打包 ascend 日志 → $pack_name"
+        echo "[*] 打包 ascend 目录 → $pack_name"
         tar -czf "$pack_name" -C "$(dirname "$CONTAINER_ASCEND_DIR")" "$(basename "$CONTAINER_ASCEND_DIR")" 2>/dev/null
         if [ $? -eq 0 ]; then
             echo "   ✓ 打包成功 ($(du -h "$pack_name" | cut -f1))"
@@ -41,6 +42,28 @@ pack_ascend_logs() {
         fi
     else
         echo "[警告] ascend 目录不存在: $CONTAINER_ASCEND_DIR"
+    fi
+}
+
+# 打包 mindsdk 目录（模拟版本）
+pack_mindsdk_logs() {
+    local operator_name="$1"
+    local timestamp
+    timestamp=$(date '+%Y%m%d_%H%M%S')
+
+    mkdir -p "$PACK_OUTPUT_DIR"
+    local pack_name="${PACK_OUTPUT_DIR}/${operator_name}_mindsdk_${timestamp}.tar.gz"
+
+    if [ -d "$CONTAINER_MINDSDK_DIR" ]; then
+        echo "[*] 打包 mindsdk 目录 → $pack_name"
+        tar -czf "$pack_name" -C "$(dirname "$CONTAINER_MINDSDK_DIR")" "$(basename "$CONTAINER_MINDSDK_DIR")" 2>/dev/null
+        if [ $? -eq 0 ]; then
+            echo "   ✓ 打包成功 ($(du -h "$pack_name" | cut -f1))"
+        else
+            echo "   ✗ 打包失败"
+        fi
+    else
+        echo "[警告] mindsdk 目录不存在: $CONTAINER_MINDSDK_DIR"
     fi
 }
 
@@ -144,9 +167,11 @@ if [ $((current_step % 10)) -ne 0 ]; then
     fetch_new_logs "$LOG_FILE" "$last_log_position" "$batch_num" "最终批次" > /dev/null
 fi
 
-# 算子执行完毕，打包 ascend 目录
+# 算子执行完毕，打包 ascend 和 mindsdk 目录
 echo ""
 pack_ascend_logs "$OPERATOR_NAME"
+echo ""
+pack_mindsdk_logs "$OPERATOR_NAME"
 
 echo ""
 echo "=================================================="
