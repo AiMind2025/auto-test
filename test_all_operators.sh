@@ -1,14 +1,14 @@
 #!/bin/bash
 # 多算子自动化测试脚本
 # 用法: ./test_all_operators.sh <目标IP> <日志ID> [步长] [最大组合数] [容器ID]
-# 示例: ./test_all_operators.sh 172.18.0.4 0              # 默认步长10
+# 示例: ./test_all_operators.sh 172.18.0.4 0              # 默认步长5
 #       ./test_all_operators.sh 172.18.0.4 0 5            # 步长5
 #       ./test_all_operators.sh 172.18.0.4 0 10 100       # 每个算子只跑100个
 #       ./test_all_operators.sh 172.18.0.4 0 10 0 2fe5937ad00a
 
 TARGET_IP="${1:-}"
 LOG_ID="${2:-}"
-STEP="${3:-10}"       # 标准算子步长，默认10
+STEP="${3:-5}"       # 标准算子步长，默认5
 MAX_STEPS="${4:-0}"   # 0=不限制
 CONTAINER_ID="${5:-}" # 留空自动查找
 
