@@ -1,16 +1,16 @@
 #!/bin/bash
 # Add 算子测试脚本 - 正式版本（带容器打包）
 # 用法: ./test_add_operator.sh <目标IP> <日志ID> [步长] [最大组合数] [容器ID]
-# 示例: ./test_add_operator.sh 172.18.0.4 0              # 步长5，跑全部
+# 示例: ./test_add_operator.sh 172.18.0.4 0              # 自动查找ccom容器
 #       ./test_add_operator.sh 172.18.0.4 0 10           # 步长10
-#       ./test_add_operator.sh 172.18.0.4 0 5 100        # 步长5，只跑100个
+#       ./test_add_operator.sh 172.18.0.4 0 5 100        # 只跑100个
 #       ./test_add_operator.sh 172.18.0.4 0 5 0 2fe5937ad00a  # 指定容器
 
 TARGET_IP="${1:-}"
 LOG_ID="${2:-}"
 STEP="${3:-5}"       # 步长，默认5
 MAX_STEPS="${4:-0}"  # 0 表示不限制
-CONTAINER_ID="${5:-}"  # 容器ID或名称
+CONTAINER_ID="${5:-}"  # 容器ID或名称，留空则自动查找ccom容器
 
 if [ -z "$TARGET_IP" ] || [ -z "$LOG_ID" ]; then
     echo "用法: $0 <目标IP> <日志ID> [步长] [最大组合数] [容器ID]"
@@ -18,6 +18,25 @@ if [ -z "$TARGET_IP" ] || [ -z "$LOG_ID" ]; then
     echo "      $0 172.18.0.4 0 10           # 步长10"
     echo "      $0 172.18.0.4 0 5 100 2fe5937ad00a"
     exit 1
+fi
+
+# 自动查找 ccom 容器
+find_ccom_container() {
+    local container
+    # 搜索包含 ccom 的正在运行的容器，排除 pause 容器
+    container=$(docker ps --format "{{.ID}} {{.Image}}" | grep -i ccom | grep -v pause | head -1 | awk '{print $1}')
+    echo "$container"
+}
+
+# 如果没有指定容器ID，自动查找
+if [ -z "$CONTAINER_ID" ]; then
+    echo "[*] 自动查找 ccom 容器..."
+    CONTAINER_ID=$(find_ccom_container)
+    if [ -n "$CONTAINER_ID" ]; then
+        echo "   ✓ 找到容器: $CONTAINER_ID"
+    else
+        echo "   ✗ 未找到 ccom 容器，将跳过打包步骤"
+    fi
 fi
 
 # 日志路径
