@@ -132,10 +132,17 @@ pack_container_ascend() {
 
     echo "[*] 打包容器内 ${CONTAINER_ASCEND_DIR}/ ..."
 
+    # 0. 检查目录是否存在
+    if ! docker exec "$container" test -d "$CONTAINER_ASCEND_DIR" 2>/dev/null; then
+        echo "   [警告] 容器内目录不存在: $CONTAINER_ASCEND_DIR"
+        return 0
+    fi
+
     # 1. 在容器内打包
-    docker exec "$container" tar -czf "$container_tmp" -C "$(dirname "$CONTAINER_ASCEND_DIR")" "$(basename "$CONTAINER_ASCEND_DIR")" 2>/dev/null
+    local tar_result
+    tar_result=$(docker exec "$container" tar -czf "$container_tmp" -C "$(dirname "$CONTAINER_ASCEND_DIR")" "$(basename "$CONTAINER_ASCEND_DIR")" 2>&1)
     if [ $? -ne 0 ]; then
-        echo "   ✗ 容器内打包失败"
+        echo "   ✗ 容器内打包失败: $tar_result"
         return 1
     fi
 
@@ -171,10 +178,17 @@ pack_container_mindsdk() {
 
     echo "[*] 打包容器内 ${CONTAINER_MINDSDK_DIR}/ ..."
 
+    # 0. 检查目录是否存在
+    if ! docker exec "$container" test -d "$CONTAINER_MINDSDK_DIR" 2>/dev/null; then
+        echo "   [警告] 容器内目录不存在: $CONTAINER_MINDSDK_DIR"
+        return 0
+    fi
+
     # 1. 在容器内打包
-    docker exec "$container" tar -czf "$container_tmp" -C "$(dirname "$CONTAINER_MINDSDK_DIR")" "$(basename "$CONTAINER_MINDSDK_DIR")" 2>/dev/null
+    local tar_result
+    tar_result=$(docker exec "$container" tar -czf "$container_tmp" -C "$(dirname "$CONTAINER_MINDSDK_DIR")" "$(basename "$CONTAINER_MINDSDK_DIR")" 2>&1)
     if [ $? -ne 0 ]; then
-        echo "   ✗ 容器内打包失败"
+        echo "   ✗ 容器内打包失败: $tar_result"
         return 1
     fi
 
