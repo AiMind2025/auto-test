@@ -135,6 +135,12 @@ success_count=0
 fail_count=0
 current_step=0
 
+echo "=================================================="
+echo "[开始] 算子: $OPERATOR_NAME"
+echo "[时间] $(date '+%Y-%m-%d %H:%M:%S')"
+echo "=================================================="
+echo ""
+
 for ((ri=0; ri<row_count; ri++)); do
     r=$((ROW_START + ri * ROW_STEP))
     for ((ci=0; ci<col_count; ci++)); do
@@ -167,7 +173,14 @@ if [ $((current_step % 10)) -ne 0 ]; then
     fetch_new_logs "$LOG_FILE" "$last_log_position" "$batch_num" "最终批次" > /dev/null
 fi
 
-# 算子执行完毕，打包 ascend 和 mindsdk 目录
+# 算子执行完毕，统计耗时
+echo ""
+echo "=================================================="
+echo "[完成] 算子: $OPERATOR_NAME"
+echo "[统计] 成功: $success_count, 失败: $fail_count, 总计: $current_step"
+echo "=================================================="
+
+# 打包 ascend 和 mindsdk 目录
 echo ""
 pack_ascend_logs "$OPERATOR_NAME"
 echo ""
@@ -175,7 +188,8 @@ pack_mindsdk_logs "$OPERATOR_NAME"
 
 echo ""
 echo "=================================================="
-echo "完成! 成功: $success_count, 失败: $fail_count"
 echo "日志目录: $OUTPUT_DIR/"
 ls -lh "$OUTPUT_DIR/"
+echo "打包目录: $PACK_OUTPUT_DIR/"
+ls -lh "$PACK_OUTPUT_DIR/"
 echo "=================================================="

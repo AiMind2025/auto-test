@@ -233,6 +233,12 @@ fail_count=0
 current_step=0
 start_time=$(date +%s)
 
+echo "=================================================="
+echo "[开始] 算子: $OPERATOR_NAME"
+echo "[时间] $(date '+%Y-%m-%d %H:%M:%S')"
+echo "=================================================="
+echo ""
+
 # 笛卡尔积：外层遍历 Rows，内层遍历 Cols
 for ((ri=0; ri<row_count; ri++)); do
     r=$((ROW_START + ri * ROW_STEP))
@@ -272,21 +278,31 @@ if [ $((current_step % 10)) -ne 0 ] && [ "$current_step" -gt 0 ]; then
 fi
 
 # 算子执行完毕，打包容器内 ascend 和 mindsdk 目录
+operator_end_time=$(date +%s)
+operator_duration=$((operator_end_time - start_time))
+operator_minutes=$((operator_duration / 60))
+operator_seconds=$((operator_duration % 60))
+
+echo ""
+echo "=================================================="
+echo "[完成] 算子: $OPERATOR_NAME"
+echo "[耗时] ${operator_minutes}分${operator_seconds}秒"
+echo "[统计] 成功: $success_count, 失败: $fail_count, 总计: $current_step"
+echo "=================================================="
 echo ""
 pack_container_ascend "$OPERATOR_NAME" "$CONTAINER_ID"
 echo ""
 pack_container_mindsdk "$OPERATOR_NAME" "$CONTAINER_ID"
 
 end_time=$(date +%s)
-duration=$((end_time - start_time))
-minutes=$((duration / 60))
-seconds=$((duration % 60))
+pack_duration=$((end_time - operator_end_time))
 
 echo ""
 echo "=================================================="
-echo "测试完成!"
-echo "成功: $success_count, 失败: $fail_count"
-echo "耗时: ${minutes}分${seconds}秒"
+echo "全部完成!"
+echo "算子耗时: ${operator_minutes}分${operator_seconds}秒"
+echo "打包耗时: ${pack_duration}秒"
+echo "总耗时: $(( (end_time - start_time) / 60 ))分$(( (end_time - start_time) % 60 ))秒"
 echo "日志目录: $OUTPUT_DIR/"
 ls -lh "$OUTPUT_DIR/" 2>/dev/null
 echo "打包目录: $PACK_OUTPUT_DIR/"
